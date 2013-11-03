@@ -109,8 +109,6 @@ class Book(ndb.Model):
     title = ndb.StringProperty(indexed=False)
     date = ndb.DateTimeProperty(auto_now_add=True)
 
-http = httplib2.Http(memcache)
-service = discovery.build("books", "v1", http=http, developerKey=API_KEY)
 decorator = appengine.oauth2decorator_from_clientsecrets(
     CLIENT_SECRETS,
     scope='https://www.googleapis.com/auth/books',
@@ -134,7 +132,22 @@ class AuthHandler(webapp2.RequestHandler):
 class LibraryHandler(webapp2.RequestHandler):
 
   @decorator.oauth_required
+  def get(self):
+    example_isbn = '0199535566'  # Pride and Prejudice
+
+    http = decorator.http()
+    service = discovery.build("books", "v1", http=http)
+    resp = service.volumes().list(q='isbn:%s' % example_isbn).execute()
+    self.response.write(resp['items'][0]['volumeInfo']['title'])
+
+  @decorator.oauth_required
   def post(self):
+    http = decorator.http()
+    service = discovery.build("books", "v1", http=http)
+    example_isbn = '0199535566'  # Pride and Prejudice
+
+    print service.volumes.list(q='isbn:%s' % example_isbn).execute()
+
     try:
       # We set the same parent key on the 'Book' to ensure each Book
       # is in the same entity group. Queries across the single entity group
@@ -170,8 +183,14 @@ class MainPage(webapp2.RequestHandler):
 
   @decorator.oauth_required
   def get(self):
+    http = decorator.http()
+    service = discovery.build("books", "v1", http=http)
+    # The service object is now authenticated as the user. You can use the
+    # mylibrary calls without a problem!
+    #mylibrary = service.mylibrary()
+    #self.response.write(mylibrary.bookshelves().list().execute())
+
     try:
-      http = decorator.http()
       user = users.get_current_user()
       self.response.write('<html><body>')
 
